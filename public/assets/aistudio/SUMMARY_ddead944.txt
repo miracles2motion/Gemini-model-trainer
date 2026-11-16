@@ -1,0 +1,8 @@
+Capture audit (inspection, not training import)
+234 selection records
+216 unique fixtures
+214 distinct stored receipts
+214 fixtures with checksum/match-valid receipts
+Receipt validity does not establish settlement or training eligibility.
+Schema 3: resolve definitions by content hash before decoding analysis/receipt payloads.
+Historical evidence is unchanged. Never replace missing recipes with today's formulas.

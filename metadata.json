@@ -1,0 +1,6 @@
+{
+  "name": "CourtQuant Model Lab",
+  "description": "Quantitative NCAA men's basketball modeling workbench for large capture-audit ingestion, Schema-3 header inspection, backtesting against CCVS, and CourtQuant formula validation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

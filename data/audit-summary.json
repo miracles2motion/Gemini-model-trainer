@@ -1,0 +1,1184 @@
+{
+  "inspectedAtIso": "2026-11-16T09:46:58.022Z",
+  "fileName": "capture-audit.json",
+  "fileSizeBytes": 12273004,
+  "topLevelKeys": [
+    "format",
+    "schemaVersion",
+    "records",
+    "selectionCount",
+    "fixtureCount",
+    "receiptCount",
+    "validatedReceiptFixtureCount"
+  ],
+  "schemaVersion": 3,
+  "headerMetadata": {
+    "format": "courtquant-capture-audit",
+    "schemaVersion": 3,
+    "selectionCount": 234,
+    "fixtureCount": 216,
+    "receiptCount": 214,
+    "validatedReceiptFixtureCount": 214
+  },
+  "definitionTableKeys": [
+    "records[].definitions"
+  ],
+  "definitionCount": 1100,
+  "recordCollectionKey": "records",
+  "totalRecords": 234,
+  "uniqueFixtureCount": 216,
+  "settledFixtureCount": 213,
+  "missingSrsCount": 20,
+  "missingSosCount": 20,
+  "receiptCount": 232,
+  "detectedCourtQuantVariables": [
+    "away.fg",
+    "away.fg3",
+    "away.fg3a",
+    "away.fga",
+    "away.ft",
+    "away.fta",
+    "away.g",
+    "away.mp",
+    "away.opp_fg",
+    "away.opp_fg3",
+    "away.opp_fg3a",
+    "away.opp_fga",
+    "away.opp_ft",
+    "away.opp_fta",
+    "away.opp_g",
+    "away.opp_orb",
+    "away.opp_pts",
+    "away.opp_tov",
+    "away.orb",
+    "away.pace",
+    "away.pts",
+    "away.pts_g",
+    "away.sos",
+    "away.srs",
+    "away.total_g",
+    "away.tov",
+    "home.fg",
+    "home.fg3",
+    "home.fg3a",
+    "home.fga",
+    "home.ft",
+    "home.fta",
+    "home.g",
+    "home.mp",
+    "home.opp_fg",
+    "home.opp_fg3",
+    "home.opp_fg3a",
+    "home.opp_fga",
+    "home.opp_ft",
+    "home.opp_fta",
+    "home.opp_g",
+    "home.opp_orb",
+    "home.opp_pts",
+    "home.opp_tov",
+    "home.orb",
+    "home.pace",
+    "home.pts",
+    "home.pts_g",
+    "home.sos",
+    "home.srs",
+    "home.total_g",
+    "home.tov"
+  ],
+  "missingCourtQuantVariables": [],
+  "sampleRecordSchema": [
+    {
+      "path": "fixtureKey",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receiptId",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receiptValid",
+      "types": [
+        "boolean"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "id",
+        "payload"
+      ]
+    },
+    {
+      "path": "receipt.id",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "schemaVersion",
+        "appVersion",
+        "fingerprint",
+        "eventId",
+        "home",
+        "away",
+        "kickoffIso",
+        "capturedAtEpochMs",
+        "statsImportedAtEpochMs",
+        "homeStats",
+        "awayStats",
+        "board",
+        "recipes",
+        "predictions"
+      ]
+    },
+    {
+      "path": "receipt.payload.schemaVersion",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.appVersion",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.fingerprint",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.eventId",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.home",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.away",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.kickoffIso",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.capturedAtEpochMs",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.statsImportedAtEpochMs",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "name",
+        "games",
+        "srs",
+        "totalPoints",
+        "opponentPoints",
+        "fieldGoalAttempts",
+        "freeThrowAttempts",
+        "offensiveRebounds",
+        "turnovers",
+        "mp",
+        "sos",
+        "fg",
+        "fg3",
+        "fg3a"
+      ]
+    },
+    {
+      "path": "receipt.payload.homeStats.name",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.games",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.srs",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.totalPoints",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.opponentPoints",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.fieldGoalAttempts",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.freeThrowAttempts",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.offensiveRebounds",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.turnovers",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.mp",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.sos",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.fg",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.fg3",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.fg3a",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.ft",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppFg",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppFga",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppFg3",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppFg3a",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppFt",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppFta",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppOrb",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.homeStats.oppTov",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "name",
+        "games",
+        "srs",
+        "totalPoints",
+        "opponentPoints",
+        "fieldGoalAttempts",
+        "freeThrowAttempts",
+        "offensiveRebounds",
+        "turnovers",
+        "mp",
+        "sos",
+        "fg",
+        "fg3",
+        "fg3a"
+      ]
+    },
+    {
+      "path": "receipt.payload.awayStats.name",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.games",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.srs",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.totalPoints",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.opponentPoints",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.fieldGoalAttempts",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.freeThrowAttempts",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.offensiveRebounds",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.turnovers",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.mp",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.sos",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.fg",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.fg3",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.fg3a",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.ft",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppFg",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppFga",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppFg3",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppFg3a",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppFt",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppFta",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppOrb",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.awayStats.oppTov",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "eventId",
+        "sportId",
+        "sportName",
+        "categoryName",
+        "tournamentName",
+        "homeTeamName",
+        "awayTeamName",
+        "estimateStartTime",
+        "kickoffIso",
+        "matchStatus",
+        "status",
+        "totalMarketSize",
+        "markets",
+        "fullMarketsLoaded"
+      ]
+    },
+    {
+      "path": "receipt.payload.board.eventId",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.sportId",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.sportName",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.categoryName",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.tournamentName",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.homeTeamName",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.awayTeamName",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.estimateStartTime",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.kickoffIso",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.matchStatus",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.status",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.totalMarketSize",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.markets",
+      "types": [
+        "array(33)"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.board.fullMarketsLoaded",
+      "types": [
+        "boolean"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "receipt.payload.recipes",
+      "types": [
+        "array(10)",
+        "array"
+      ],
+      "presentCount": 2
+    },
+    {
+      "path": "receipt.payload.predictions",
+      "types": [
+        "array(10)",
+        "array"
+      ],
+      "presentCount": 2
+    },
+    {
+      "path": "receipt.payload.source",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.eventId",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.home",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.away",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.kickoffIso",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.status",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.market",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.userPick",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.line",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.direction",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.odds",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.sportyProbability",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.baselineTotal",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.winner",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "winner",
+        "signedHomeMargin",
+        "confidence"
+      ]
+    },
+    {
+      "path": "analysis.winner.winner",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.winner.signedHomeMargin",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.winner.confidence",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models",
+      "types": [
+        "array(15)",
+        "array"
+      ],
+      "presentCount": 2
+    },
+    {
+      "path": "analysis.models[].model",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].projectedTotal",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].direction",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].valueScore",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].verdict",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].probability",
+      "types": [
+        "null"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].userProbability",
+      "types": [
+        "null"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].agreesWithUser",
+      "types": [
+        "boolean"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].modelId",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].fullName",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].projectedHome",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].projectedAway",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].projectedMargin",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].homeWinProbability",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.models[].rankedDecisions",
+      "types": [
+        "array(3)"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "name",
+        "games",
+        "srs",
+        "totalPoints",
+        "opponentPoints",
+        "fieldGoalAttempts",
+        "freeThrowAttempts",
+        "offensiveRebounds",
+        "turnovers",
+        "mp",
+        "sos",
+        "fg",
+        "fg3",
+        "fg3a"
+      ]
+    },
+    {
+      "path": "analysis.homeStats.name",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.games",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.srs",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.totalPoints",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.opponentPoints",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.fieldGoalAttempts",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.freeThrowAttempts",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.offensiveRebounds",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.turnovers",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.mp",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.sos",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.fg",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.fg3",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.fg3a",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.ft",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppFg",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppFga",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppFg3",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppFg3a",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppFt",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppFta",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppOrb",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.homeStats.oppTov",
+      "types": [
+        "number"
+      ],
+      "presentCount": 1
+    },
+    {
+      "path": "analysis.awayStats",
+      "types": [
+        "object"
+      ],
+      "presentCount": 1,
+      "sampleKeys": [
+        "name",
+        "games",
+        "srs",
+        "totalPoints",
+        "opponentPoints",
+        "fieldGoalAttempts",
+        "freeThrowAttempts",
+        "offensiveRebounds",
+        "turnovers",
+        "mp",
+        "sos",
+        "fg",
+        "fg3",
+        "fg3a"
+      ]
+    },
+    {
+      "path": "analysis.awayStats.name",
+      "types": [
+        "string"
+      ],
+      "presentCount": 1
+    }
+  ],
+  "dateRange": {
+    "earliest": "2026-11-11T16:30:00.000Z",
+    "latest": "2026-11-16T02:00:00.000Z"
+  },
+  "warnings": []
+}
