@@ -550,11 +550,23 @@ function finalizeBucket(b: BucketAccumulator): SplitBacktestMetrics {
   };
 }
 
+export function resolveSplitCutoffIso(fixtures: BacktestFixture[]): string {
+  if (fixtures.length === 0) return CHRONOLOGICAL_SPLIT_ISO;
+  const first = fixtures[0].kickoffIso;
+  const last = fixtures[fixtures.length - 1].kickoffIso;
+  if (first && last && first < CHRONOLOGICAL_SPLIT_ISO && last >= CHRONOLOGICAL_SPLIT_ISO) {
+    return CHRONOLOGICAL_SPLIT_ISO;
+  }
+  const splitIdx = Math.max(1, Math.min(fixtures.length - 1, Math.floor(fixtures.length * 0.35)));
+  return fixtures[splitIdx]?.kickoffIso || CHRONOLOGICAL_SPLIT_ISO;
+}
+
 export function backtestModel(
   model: CourtQuantModel,
   fixtures: BacktestFixture[],
   trust = 1.0,
 ): ModelBacktestReport {
+  const splitCutoffIso = resolveSplitCutoffIso(fixtures);
   const allB = createBucket();
   const trainB = createBucket();
   const testB = createBucket();
@@ -575,7 +587,7 @@ export function backtestModel(
 
   for (let idx = 0; idx < fixtures.length; idx += 1) {
     const f = fixtures[idx];
-    const splitB = f.kickoffIso < CHRONOLOGICAL_SPLIT_ISO ? trainB : testB;
+    const splitB = f.kickoffIso < splitCutoffIso ? trainB : testB;
     const foldIdx = Math.min(4, Math.floor((idx * 5) / Math.max(1, fixtures.length)));
     const targets = [allB, splitB, foldBs[foldIdx]];
 
@@ -676,7 +688,8 @@ export function backtestModel(
 }
 
 export function summarizeBacktestDataset(fixtures: BacktestFixture[]): BacktestDatasetSummary {
-  const trainCount = fixtures.filter((f) => f.kickoffIso < CHRONOLOGICAL_SPLIT_ISO).length;
+  const splitCutoffIso = resolveSplitCutoffIso(fixtures);
+  const trainCount = fixtures.filter((f) => f.kickoffIso < splitCutoffIso).length;
   const testCount = fixtures.length - trainCount;
   const srsCompleteFixtures = fixtures.filter(
     (f) =>
@@ -690,7 +703,7 @@ export function summarizeBacktestDataset(fixtures: BacktestFixture[]): BacktestD
     srsCompleteFixtures,
     trainCount,
     testCount,
-    splitCutoffIso: CHRONOLOGICAL_SPLIT_ISO,
+    splitCutoffIso,
     earliestIso: fixtures.length > 0 ? fixtures[0].kickoffIso : null,
     latestIso: fixtures.length > 0 ? fixtures[fixtures.length - 1].kickoffIso : null,
   };

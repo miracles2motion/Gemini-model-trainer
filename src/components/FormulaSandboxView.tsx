@@ -1,7 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, AlertTriangle, Download, Play, RotateCcw } from 'lucide-react';
-import type { ModelBacktestReport } from '../lib/backtestEngine';
-import { CHAMPION_MODEL_QVCE, CHAMPION_MODEL_QWIN } from '../lib/championModel';
+import { CheckCircle2, AlertTriangle, Download, Play, Plus, Save } from 'lucide-react';
+import {
+  backtestModel,
+  type BacktestDatasetSummary,
+  type BacktestFixture,
+  type ModelBacktestReport,
+} from '../lib/backtestEngine';
 import {
   evaluateModelProjections,
   validateCourtQuantModel,
@@ -12,11 +16,17 @@ import type {
   FormulaSlot,
   TeamStats,
 } from '../lib/courtquantTypes';
+import { createBlankDraftModel } from '../lib/workspaceStorage';
 
 interface FormulaSandboxViewProps {
   draftModel: CourtQuantModel;
+  existingModels: CourtQuantModel[];
+  benchmarkModel: CourtQuantModel | null;
+  benchmarkReport: ModelBacktestReport | null;
+  auditFixtures: BacktestFixture[];
+  datasetSummary: BacktestDatasetSummary | null;
   onChangeDraft: (next: CourtQuantModel) => void;
-  hasAuditDataset: boolean;
+  onSaveDraftToLibrary: (model: CourtQuantModel) => Promise<void>;
 }
 
 const SAMPLE_HOME: TeamStats = {
@@ -89,16 +99,17 @@ const SLOT_META: Array<{ key: FormulaSlot; label: string; hint: string }> = [
 
 export const FormulaSandboxView: React.FC<FormulaSandboxViewProps> = ({
   draftModel,
+  existingModels,
+  benchmarkModel,
+  benchmarkReport,
+  auditFixtures,
+  datasetSummary,
   onChangeDraft,
-  hasAuditDataset,
+  onSaveDraftToLibrary,
 }) => {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [backtesting, setBacktesting] = useState(false);
   const [backtestError, setBacktestError] = useState<string | null>(null);
-  const [liveResult, setLiveResult] = useState<{
-    report: ModelBacktestReport;
-    benchmarkReport: ModelBacktestReport | null;
-  } | null>(null);
+  const [liveReport, setLiveReport] = useState<ModelBacktestReport | null>(null);
 
   const validation = useMemo(() => validateCourtQuantModel(draftModel), [draftModel]);
   const projection = useMemo(
@@ -139,66 +150,53 @@ export const FormulaSandboxView: React.FC<FormulaSandboxViewProps> = ({
     URL.revokeObjectURL(url);
   }
 
-  async function handleSaveToWorkspace() {
+  async function handleSaveToLibrary() {
     setSaveMessage(null);
-    const pkg: CourtQuantPackage = {
-      schemaVersion: 1,
-      app: 'CourtQuant',
-      models: [
-        {
-          fullName: draftModel.fullName.trim(),
-          abbreviation: draftModel.abbreviation.trim(),
-          description: draftModel.description,
-          formulas: draftModel.formulas,
-        },
-      ],
+    if (!validation.valid) {
+      setSaveMessage(validation.issues[0]?.message ?? 'Validation failed');
+      return;
+    }
+    const cleanModel: CourtQuantModel = {
+      fullName: draftModel.fullName.trim(),
+      abbreviation: draftModel.abbreviation.trim().toUpperCase(),
+      description: draftModel.description,
+      formulas: draftModel.formulas,
     };
-    const res = await fetch('/api/models/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pkg),
-    });
-    const body = await res.json();
-    if (res.ok) {
-      setSaveMessage(`Saved ${draftModel.abbreviation} to workspace custom-models.json`);
-    } else {
-      setSaveMessage(body?.errors?.[0] || 'Validation failed');
+    await onSaveDraftToLibrary(cleanModel);
+    setSaveMessage(`Saved ${cleanModel.abbreviation} to your browser Model Registry.`);
+  }
+
+  function handleRunLiveBacktest() {
+    setBacktestError(null);
+    if (!validation.valid) {
+      setBacktestError(validation.issues[0]?.message ?? 'Fix formula validation issues first.');
+      return;
+    }
+    if (auditFixtures.length === 0) {
+      setBacktestError('Import capture-audit.json in Ingestion to run live backtests.');
+      return;
+    }
+    try {
+      const report = backtestModel(draftModel, auditFixtures, 1.0);
+      setLiveReport(report);
+    } catch (err) {
+      setBacktestError(err instanceof Error ? err.message : 'Backtest failed');
     }
   }
 
-  async function handleRunLiveBacktest() {
-    setBacktesting(true);
-    setBacktestError(null);
-    try {
-      const res = await fetch('/api/backtest/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draftModel),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body?.error || body?.issues?.[0]?.message || 'Backtest failed');
-      }
-      setLiveResult({
-        report: body.report,
-        benchmarkReport: body.benchmarkReport ?? null,
-      });
-    } catch (err) {
-      setBacktestError(err instanceof Error ? err.message : 'Backtest failed');
-    } finally {
-      setBacktesting(false);
-    }
-  }
+  const allCount = datasetSummary?.totalSettledFixtures ?? auditFixtures.length;
+  const trainCount = datasetSummary?.trainCount ?? 0;
+  const testCount = datasetSummary?.testCount ?? 0;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            CourtQuant Formula Sandbox &amp; RFC-8259 Validator
+            CourtQuant Formula Sandbox &amp; Validator
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Edit AST expressions, run live Train/Test/5-Fold CV backtests against CCVS, and export valid Android JSON.
+            Edit AST expressions, validate against strict RFC-8259 &amp; CourtQuant rules, save to your browser library, or export JSON.
           </p>
         </div>
 
@@ -206,43 +204,33 @@ export const FormulaSandboxView: React.FC<FormulaSandboxViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              onChangeDraft(CHAMPION_MODEL_QWIN);
-              setLiveResult(null);
+              onChangeDraft(createBlankDraftModel(existingModels));
+              setLiveReport(null);
               setSaveMessage(null);
+              setBacktestError(null);
             }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Load QWIN Win-Rate
+            <Plus className="h-3.5 w-3.5" />
+            New Blank Model
           </button>
           <button
             type="button"
-            onClick={() => {
-              onChangeDraft(CHAMPION_MODEL_QVCE);
-              setLiveResult(null);
-              setSaveMessage(null);
-            }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Load QVCE ROI
-          </button>
-          <button
-            type="button"
-            disabled={!validation.valid || !hasAuditDataset || backtesting}
-            onClick={() => void handleRunLiveBacktest()}
+            disabled={!validation.valid || auditFixtures.length === 0}
+            onClick={handleRunLiveBacktest}
             className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-teal-50 px-3.5 py-2 text-xs font-semibold text-teal-900 hover:bg-teal-100 disabled:opacity-50 whitespace-nowrap shrink-0"
           >
             <Play className="h-3.5 w-3.5" />
-            {backtesting ? 'Backtesting...' : 'Run Audit Backtest'}
+            Run Audit Backtest
           </button>
           <button
             type="button"
             disabled={!validation.valid}
-            onClick={() => void handleSaveToWorkspace()}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap shrink-0"
+            onClick={() => void handleSaveToLibrary()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap shrink-0"
           >
-            Save Draft
+            <Save className="h-3.5 w-3.5" />
+            Save to Library
           </button>
           <button
             type="button"
@@ -271,16 +259,17 @@ export const FormulaSandboxView: React.FC<FormulaSandboxViewProps> = ({
         </div>
       )}
 
-      {/* Live Backtest Comparison Panel */}
-      {liveResult && (
+      {/* Live Backtest Result Panel */}
+      {liveReport && (
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-base font-semibold text-slate-900">
-              Live Backtest Result: {liveResult.report.abbreviation} vs CCVS
+              Live Backtest Result: {liveReport.abbreviation}
+              {benchmarkModel ? ` vs ${benchmarkModel.abbreviation} (Benchmark)` : ''}
             </h2>
             <span className="font-mono text-xs text-slate-600 tabular-nums">
               5-Fold CV ROI:{' '}
-              {liveResult.report.foldP1GateRoiPct
+              {liveReport.foldP1GateRoiPct
                 .map((v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`)
                 .join(' | ')}
             </span>
@@ -291,26 +280,28 @@ export const FormulaSandboxView: React.FC<FormulaSandboxViewProps> = ({
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
                   <th className="py-2 pr-3 font-medium">Split</th>
-                  <th className="py-2 pr-3 text-right font-medium">Tot RMSE (vs CCVS)</th>
-                  <th className="py-2 pr-3 text-right font-medium">Mar RMSE (vs CCVS)</th>
-                  <th className="py-2 pr-3 text-right font-medium">Win LL (vs CCVS)</th>
-                  <th className="py-2 pr-3 text-right font-medium">Unf Hit % (vs CCVS)</th>
+                  <th className="py-2 pr-3 text-right font-medium">Tot RMSE</th>
+                  <th className="py-2 pr-3 text-right font-medium">Mar RMSE</th>
+                  <th className="py-2 pr-3 text-right font-medium">Win LL</th>
+                  <th className="py-2 pr-3 text-right font-medium">Unf Hit %</th>
                   <th className="py-2 pr-3 text-right font-medium">Gate Picks / Hit %</th>
-                  <th className="py-2 pr-3 text-right font-medium">Gate ROI (vs CCVS)</th>
-                  <th className="py-2 pr-3 text-right font-medium">Top-1 PnL (vs CCVS)</th>
-                  <th className="py-2 text-right font-medium">Top-3 PnL (vs CCVS)</th>
+                  <th className="py-2 pr-3 text-right font-medium">Gate ROI</th>
+                  <th className="py-2 pr-3 text-right font-medium">Top-1 PnL</th>
+                  <th className="py-2 text-right font-medium">Top-3 PnL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {(
                   [
-                    ['all', 'All Settled (210)'],
-                    ['train', 'Train < Nov 14 (70)'],
-                    ['test', 'OOS Test >= Nov 14 (137)'],
+                    ['all', `All Settled (${allCount})`],
+                    ['train', `Train Split (${trainCount})`],
+                    ['test', `OOS Test Split (${testCount})`],
                   ] as const
                 ).map(([key, label]) => {
-                  const d = liveResult.report[key];
-                  const c = liveResult.benchmarkReport?.[key] ?? null;
+                  const d = liveReport[key];
+                  const c = benchmarkReport?.[key] ?? null;
+                  const fmtSign = (val: number) => `${val > 0 ? '+' : ''}${val.toFixed(2)}%`;
+                  const fmtUnits = (val: number) => `${val > 0 ? '+' : ''}${val.toFixed(1)}u`;
                   return (
                     <tr key={key}>
                       <td className="py-2 pr-3 font-medium text-slate-900">{label}</td>
@@ -334,19 +325,16 @@ export const FormulaSandboxView: React.FC<FormulaSandboxViewProps> = ({
                         {d.p1GateCount} ({d.p1GateHitPct.toFixed(1)}%)
                       </td>
                       <td className="py-2 pr-3 text-right font-mono font-semibold tabular-nums text-teal-800">
-                        {d.p1GateRoiPct > 0 ? '+' : ''}
-                        {d.p1GateRoiPct.toFixed(2)}%
-                        {c ? ` (+${c.p1GateRoiPct.toFixed(2)}%)` : ''}
+                        {fmtSign(d.p1GateRoiPct)}
+                        {c ? ` (${fmtSign(c.p1GateRoiPct)})` : ''}
                       </td>
                       <td className="py-2 pr-3 text-right font-mono font-semibold tabular-nums text-slate-900">
-                        {d.p1GatePnlUnits > 0 ? '+' : ''}
-                        {d.p1GatePnlUnits.toFixed(1)}u
-                        {c ? ` (+${c.p1GatePnlUnits.toFixed(1)}u)` : ''}
+                        {fmtUnits(d.p1GatePnlUnits)}
+                        {c ? ` (${fmtUnits(c.p1GatePnlUnits)})` : ''}
                       </td>
                       <td className="py-2 text-right font-mono font-semibold tabular-nums text-slate-900">
-                        {d.top3GatePnlUnits > 0 ? '+' : ''}
-                        {d.top3GatePnlUnits.toFixed(1)}u
-                        {c ? ` (+${c.top3GatePnlUnits.toFixed(1)}u)` : ''}
+                        {fmtUnits(d.top3GatePnlUnits)}
+                        {c ? ` (${fmtUnits(c.top3GatePnlUnits)})` : ''}
                       </td>
                     </tr>
                   );

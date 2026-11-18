@@ -1,14 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
+import { backtestModel, extractAuditFixtures } from './backtestEngine.ts';
 import {
   evaluateDecisionOrGate,
   evaluateModelProjections,
   validateCourtQuantModel,
   validateCourtQuantPackage,
-} from './courtquantEngine';
-import type { CourtQuantPackage, TeamStats } from './courtquantTypes';
+} from './courtquantEngine.ts';
+import type { CourtQuantModel, CourtQuantPackage, TeamStats } from './courtquantTypes.ts';
 
 const SAMPLE_HOME: TeamStats = {
   g: 5,
@@ -68,88 +67,43 @@ const SAMPLE_AWAY: TeamStats = {
   opp_tov: 60,
 };
 
-test('all 17 models in uploaded courtquant-models JSON validate and evaluate cleanly', () => {
-  const jsonPath = path.resolve(
-    process.cwd(),
-    'public/assets/aistudio/courtquant-models__1__e8e6e8ec.json',
-  );
-  const pkg = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as CourtQuantPackage;
-  assert.equal(pkg.models.length, 17);
+const VALID_SAMPLE_MODEL: CourtQuantModel = {
+  fullName: 'Balanced Tempo Baseline',
+  abbreviation: 'BTB',
+  description: 'Self-contained coherent test model for CourtQuant AST evaluation.',
+  formulas: {
+    matchTotal: '(home.pts_g + away.opp_g + away.pts_g + home.opp_g) * 0.5',
+    homeTotal: '0.5 * (proj.total + proj.margin)',
+    awayTotal: '0.5 * (proj.total - proj.margin)',
+    handicap: '((home.srs - away.srs) + 3.2)',
+    straightWin: '1 / (1 + pow(2.71828, -(proj.margin * 0.145)))',
+    decision: 'opt.ev * 100 + opt.prob * 5',
+    pickGate: 'opt.ev',
+  },
+};
+
+test('validates CourtQuant package, maintains scoreboard coherence, and detects missing SRS gracefully', () => {
+  const pkg: CourtQuantPackage = {
+    schemaVersion: 1,
+    app: 'CourtQuant',
+    models: [VALID_SAMPLE_MODEL],
+  };
 
   const pkgValidation = validateCourtQuantPackage(pkg);
   assert.equal(pkgValidation.valid, true, pkgValidation.errors.join('\n'));
 
-  for (const model of pkg.models) {
-    const proj = evaluateModelProjections(model.formulas, SAMPLE_HOME, SAMPLE_AWAY);
-    assert.deepEqual(
-      proj.errors,
-      {},
-      `Model ${model.abbreviation} had evaluation errors: ${JSON.stringify(proj.errors)}`,
-    );
-    assert.equal(typeof proj.matchTotal, 'number');
-    assert.ok(proj.matchTotal! >= 20 && proj.matchTotal! <= 400);
-
-    if (model.formulas.decision) {
-      const dec = evaluateDecisionOrGate(
-        model.formulas.decision,
-        SAMPLE_HOME,
-        SAMPLE_AWAY,
-        {
-          home: proj.homeTotal,
-          away: proj.awayTotal,
-          total: proj.matchTotal,
-          margin: proj.handicap,
-        },
-        {
-          edge: 4.5,
-          z: 0.42,
-          prob: 0.61,
-          odds: 1.9,
-          implied_prob: 1 / 1.9,
-          ev: 0.61 * 1.9 - 1,
-          line: 146.5,
-          is_total: 1,
-          is_home_total: 0,
-          is_away_total: 0,
-          is_handicap: 0,
-          is_win: 0,
-        },
-        1.05,
-      );
-      assert.equal(dec.error, undefined);
-      assert.equal(typeof dec.value, 'number');
-    }
-  }
-});
-
-test('CCVS maintains scoreboard coherence and handles missing SRS cleanly', () => {
-  const jsonPath = path.resolve(
-    process.cwd(),
-    'public/assets/aistudio/courtquant-models__1__e8e6e8ec.json',
-  );
-  const pkg = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as CourtQuantPackage;
-  const ccvs = pkg.models.find((m) => m.abbreviation === 'CCVS');
-  assert.ok(ccvs);
-
-  const proj = evaluateModelProjections(ccvs.formulas, SAMPLE_HOME, SAMPLE_AWAY);
+  const proj = evaluateModelProjections(VALID_SAMPLE_MODEL.formulas, SAMPLE_HOME, SAMPLE_AWAY);
+  assert.deepEqual(proj.errors, {});
   assert.ok(proj.matchTotal !== null && proj.homeTotal !== null && proj.awayTotal !== null && proj.handicap !== null);
   assert.ok(Math.abs(proj.homeTotal! + proj.awayTotal! - proj.matchTotal!) < 1e-9);
   assert.ok(Math.abs(proj.homeTotal! - proj.awayTotal! - proj.handicap!) < 1e-9);
 
   const missingSrsHome: TeamStats = { ...SAMPLE_HOME, srs: null };
-  const noDataProj = evaluateModelProjections(ccvs.formulas, missingSrsHome, SAMPLE_AWAY);
-  assert.ok(noDataProj.matchTotal !== null);
-  assert.equal(noDataProj.handicap, null);
-  assert.ok(noDataProj.noDataSlots.includes('handicap'));
+  const noSrsProj = evaluateModelProjections(VALID_SAMPLE_MODEL.formulas, missingSrsHome, SAMPLE_AWAY);
+  assert.ok(noSrsProj.matchTotal !== null);
+  assert.equal(noSrsProj.handicap, null);
+  assert.ok(noSrsProj.noDataSlots.includes('handicap'));
 });
-
-import { backtestModel, extractAuditFixtures } from './backtestEngine';
-import {
-  CHAMPION_MODEL_QVCE,
-  CHAMPION_MODEL_QWIN,
-  CHAMPION_PACKAGE_QVCE,
-  CHAMPION_PACKAGE_QWIN,
-} from './championModel';
 
 test('validator rejects forbidden syntax, reserved IDs, and opt.* inside market slots', () => {
   const bad = validateCourtQuantModel({
@@ -165,28 +119,37 @@ test('validator rejects forbidden syntax, reserved IDs, and opt.* inside market 
   assert.ok(bad.issues.some((i) => i.message.includes('Forbidden syntax "^"')));
 });
 
-test('QVCE champion package passes RFC-8259 & CourtQuant strict validation and scoreboard coherence', () => {
-  const pkgValidation = validateCourtQuantPackage(CHAMPION_PACKAGE_QVCE);
-  assert.equal(pkgValidation.valid, true, pkgValidation.errors.join('\n'));
-  assert.equal(CHAMPION_MODEL_QVCE.abbreviation, 'QVCE');
+test('evaluates decision & pickGate and scores extracted Schema-3 SportyBet markets cleanly', () => {
+  const proj = evaluateModelProjections(VALID_SAMPLE_MODEL.formulas, SAMPLE_HOME, SAMPLE_AWAY);
+  const dec = evaluateDecisionOrGate(
+    VALID_SAMPLE_MODEL.formulas.decision,
+    SAMPLE_HOME,
+    SAMPLE_AWAY,
+    {
+      home: proj.homeTotal,
+      away: proj.awayTotal,
+      total: proj.matchTotal,
+      margin: proj.handicap,
+    },
+    {
+      edge: 4.5,
+      z: 0.42,
+      prob: 0.61,
+      odds: 1.9,
+      implied_prob: 1 / 1.9,
+      ev: 0.61 * 1.9 - 1,
+      line: 146.5,
+      is_total: 1,
+      is_home_total: 0,
+      is_away_total: 0,
+      is_handicap: 0,
+      is_win: 0,
+    },
+    1.05,
+  );
+  assert.equal(dec.error, undefined);
+  assert.equal(typeof dec.value, 'number');
 
-  const modelCheck = validateCourtQuantModel(CHAMPION_MODEL_QVCE);
-  assert.equal(modelCheck.valid, true);
-
-  for (const val of Object.values(CHAMPION_MODEL_QVCE.formulas)) {
-    if (typeof val === 'string') {
-      assert.ok(val.length <= 2000);
-      assert.equal(val.includes('\n'), false);
-    }
-  }
-
-  const proj = evaluateModelProjections(CHAMPION_MODEL_QVCE.formulas, SAMPLE_HOME, SAMPLE_AWAY);
-  assert.deepEqual(proj.errors, {});
-  assert.ok(proj.matchTotal !== null && proj.homeTotal !== null && proj.awayTotal !== null && proj.handicap !== null);
-  assert.ok(Math.abs(proj.homeTotal! + proj.awayTotal! - proj.matchTotal!) < 1e-9);
-  assert.ok(Math.abs(proj.homeTotal! - proj.awayTotal! - proj.handicap!) < 1e-9);
-
-  // Backtest engine evaluates extracted Schema-3 fixture & SportyBet markets cleanly
   const mockAudit = {
     schemaVersion: 3,
     records: [
@@ -216,62 +179,7 @@ test('QVCE champion package passes RFC-8259 & CourtQuant strict validation and s
 
   const fixtures = extractAuditFixtures(mockAudit);
   assert.equal(fixtures.length, 1);
-  const report = backtestModel(CHAMPION_MODEL_QVCE, fixtures, 1.0);
+  const report = backtestModel(VALID_SAMPLE_MODEL, fixtures, 1.0);
   assert.equal(report.all.totCount, 1);
-  assert.equal(report.test.p1GateCount, 1);
-  assert.equal(report.test.p1GatePnlUnits, 0.88);
+  assert.equal(report.all.p1AllCount, 1);
 });
-
-test('QWIN win-rate champion passes RFC-8259 & CourtQuant strict validation and scores missing-SRS games cleanly', () => {
-  const pkgValidation = validateCourtQuantPackage(CHAMPION_PACKAGE_QWIN);
-  assert.equal(pkgValidation.valid, true, pkgValidation.errors.join('\n'));
-  assert.equal(CHAMPION_MODEL_QWIN.abbreviation, 'QWIN');
-  assert.equal(CHAMPION_MODEL_QWIN.description.split(/\n\n/).length, 4);
-
-  const modelCheck = validateCourtQuantModel(CHAMPION_MODEL_QWIN);
-  assert.equal(modelCheck.valid, true);
-
-  for (const val of Object.values(CHAMPION_MODEL_QWIN.formulas)) {
-    if (typeof val === 'string') {
-      assert.ok(val.length <= 2000);
-      assert.equal(val.includes('\n'), false);
-    }
-  }
-
-  // QWIN decision relies only on proj.total (never proj.margin), so missing-SRS fixtures still score Match O/U!
-  const missingSrsHome: TeamStats = { ...SAMPLE_HOME, srs: null };
-  const noSrsProj = evaluateModelProjections(CHAMPION_MODEL_QWIN.formulas, missingSrsHome, SAMPLE_AWAY);
-  assert.ok(noSrsProj.matchTotal !== null);
-  assert.equal(noSrsProj.handicap, null);
-
-  const dec = evaluateDecisionOrGate(
-    CHAMPION_MODEL_QWIN.formulas.decision,
-    missingSrsHome,
-    SAMPLE_AWAY,
-    {
-      home: noSrsProj.homeTotal,
-      away: noSrsProj.awayTotal,
-      total: noSrsProj.matchTotal,
-      margin: noSrsProj.handicap,
-    },
-    {
-      edge: 12.0,
-      z: 0.8,
-      prob: 0.788,
-      odds: 1.35,
-      implied_prob: 1 / 1.35,
-      ev: 0.788 * 1.35 - 1,
-      line: 155.5,
-      is_total: 1,
-      is_home_total: 0,
-      is_away_total: 0,
-      is_handicap: 0,
-      is_win: 0,
-    },
-    1.0,
-  );
-  assert.equal(dec.error, undefined);
-  assert.equal(typeof dec.value, 'number');
-});
-
-

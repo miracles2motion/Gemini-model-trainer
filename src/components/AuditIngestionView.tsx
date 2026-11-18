@@ -1,15 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { FileUp, RefreshCw, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import type { UploadStatusResponse } from '../lib/courtquantTypes';
+import { FileUp, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  createStoredAuditDataset,
+  type StoredAuditDataset,
+} from '../lib/workspaceStorage';
 
 interface AuditIngestionViewProps {
-  status: UploadStatusResponse | null;
-  loadingStatus: boolean;
-  onRefreshStatus: () => Promise<void>;
-  onUploadComplete: (nextStatus: UploadStatusResponse) => void;
+  auditDataset: StoredAuditDataset | null;
+  loadingStorage: boolean;
+  onSaveAuditDataset: (dataset: StoredAuditDataset) => Promise<void>;
+  onClearAuditDataset: () => Promise<void>;
+  onNavigateToModels: () => void;
 }
-
-const CHUNK_SIZE_BYTES = 512 * 1024; // 512 KB chunks avoid reverse-proxy payload limits
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -18,107 +20,62 @@ function formatBytes(bytes: number): string {
 }
 
 export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
-  status,
-  loadingStatus,
-  onRefreshStatus,
-  onUploadComplete,
+  auditDataset,
+  loadingStorage,
+  onSaveAuditDataset,
+  onClearAuditDataset,
+  onNavigateToModels,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [stageLabel, setStageLabel] = useState('');
   const [progressPct, setProgressPct] = useState(0);
-  const [uploadedBytes, setUploadedBytes] = useState(0);
-  const [totalBytes, setTotalBytes] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [schemaFilter, setSchemaFilter] = useState('');
 
   async function handleFile(file: File) {
     setUploadError(null);
-    setUploading(true);
-    setProgressPct(0);
-    setUploadedBytes(0);
-    setTotalBytes(file.size);
-
-    const uploadId = `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setConfirmClear(false);
+    setProcessing(true);
+    setStageLabel(`Reading ${file.name}...`);
+    setProgressPct(20);
 
     try {
-      const initRes = await fetch('/api/upload/init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploadId }),
-      });
-      if (!initRes.ok) {
-        throw new Error('Could not initialize chunked upload session');
-      }
+      const text = await file.text();
+      setStageLabel('Parsing JSON & resolving Schema-3 $ref hashes...');
+      setProgressPct(55);
+      await new Promise((r) => setTimeout(r, 15));
 
-      const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE_BYTES));
-      let sent = 0;
-
-      for (let i = 0; i < totalChunks; i += 1) {
-        const start = i * CHUNK_SIZE_BYTES;
-        const end = Math.min(file.size, start + CHUNK_SIZE_BYTES);
-        const slice = file.slice(start, end);
-        const buf = await slice.arrayBuffer();
-
-        const chunkRes = await fetch(
-          `/api/upload/chunk?uploadId=${encodeURIComponent(uploadId)}&index=${i}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/octet-stream' },
-            body: buf,
-          },
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch (err) {
+        throw new Error(
+          err instanceof Error ? `Invalid JSON file: ${err.message}` : 'Invalid JSON file',
         );
-        if (!chunkRes.ok) {
-          const msg = await chunkRes.text();
-          throw new Error(`Chunk ${i + 1}/${totalChunks} failed: ${msg}`);
-        }
-
-        sent += buf.byteLength;
-        setUploadedBytes(sent);
-        setProgressPct(Math.round(((i + 1) / totalChunks) * 95));
       }
 
-      const completeRes = await fetch('/api/upload/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploadId, fileName: file.name }),
-      });
-      const completeBody = await completeRes.json();
-      if (!completeRes.ok) {
-        throw new Error(completeBody?.error || 'Server failed to inspect uploaded JSON');
-      }
+      setStageLabel('Extracting settled SportyBet fixtures & Market 219–228 odds...');
+      setProgressPct(80);
+      await new Promise((r) => setTimeout(r, 15));
 
+      const dataset = createStoredAuditDataset(parsed, file.name, file.size);
+      setStageLabel('Saving compact fixture index to browser IndexedDB...');
+      setProgressPct(95);
+
+      await onSaveAuditDataset(dataset);
       setProgressPct(100);
-      onUploadComplete({
-        hasAuditFile: true,
-        fileSizeBytes: completeBody.fileSizeBytes,
-        updatedAtIso: new Date().toISOString(),
-        summary: completeBody.summary,
-      });
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+      setUploadError(err instanceof Error ? err.message : 'Failed to parse audit JSON');
     } finally {
-      setUploading(false);
+      setProcessing(false);
+      setStageLabel('');
     }
   }
 
-  async function handleClearAudit() {
-    setUploadError(null);
-    try {
-      const res = await fetch('/api/audit', { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to remove audit dataset');
-      onUploadComplete({
-        hasAuditFile: false,
-        fileSizeBytes: 0,
-        updatedAtIso: null,
-        summary: null,
-      });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Delete failed');
-    }
-  }
-
-  const summary = status?.summary ?? null;
+  const summary = auditDataset?.summary ?? null;
   const filteredSchema = summary
     ? summary.sampleRecordSchema.filter((f) =>
         f.path.toLowerCase().includes(schemaFilter.trim().toLowerCase()),
@@ -127,41 +84,54 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 text-balance">
             Capture Audit Ingestion &amp; Schema-3 Inspector
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Stream large capture-audit.json files directly to workspace disk in 512 KB chunks without entering chat context.
+            Import your <span className="font-mono text-xs text-slate-800">capture-audit.json</span> locally in your browser.
+            No server uploads or cloud storage — your dataset is persisted privately in IndexedDB.
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => void onRefreshStatus()}
-            disabled={loadingStatus || uploading}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap shrink-0"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loadingStatus ? 'animate-spin' : ''}`} />
-            Refresh Status
-          </button>
-          {status?.hasAuditFile && (
+          {auditDataset && !confirmClear && (
             <button
               type="button"
-              onClick={() => void handleClearAudit()}
-              disabled={uploading}
+              onClick={() => setConfirmClear(true)}
+              disabled={processing}
               className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3.5 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 whitespace-nowrap shrink-0"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Remove Dataset
             </button>
           )}
+          {auditDataset && confirmClear && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  setConfirmClear(false);
+                  await onClearAuditDataset();
+                }}
+                className="rounded-lg bg-red-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-red-700 whitespace-nowrap shrink-0"
+              >
+                Confirm Remove
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmClear(false)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Chunked Dropzone */}
+      {/* Browser-Local Dropzone */}
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <div
           onDragOver={(e) => {
@@ -183,13 +153,13 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
         >
           <FileUp className="h-8 w-8 text-teal-700" aria-hidden="true" />
           <h2 className="mt-3 text-base font-semibold text-slate-900">
-            {status?.hasAuditFile
-              ? 'Replace capture-audit.json on workspace disk'
-              : 'Upload capture-audit.json directly to workspace'}
+            {auditDataset
+              ? 'Replace stored capture-audit.json in browser'
+              : 'Import capture-audit.json into browser IndexedDB'}
           </h2>
           <p className="mt-1 max-w-xl text-sm text-slate-600">
-            Saved directly to <span className="font-mono text-xs text-slate-800">data/capture-audit.json</span> on the server.
-            Only compact Schema-3 headers and CourtQuant variable coverage are extracted for inspection.
+            Parsed directly on your device with full Schema-3 <span className="font-mono text-xs">$ref</span> dereferencing.
+            Works offline and without upload limits.
           </p>
 
           <input
@@ -205,24 +175,31 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
             }}
           />
 
-          <div className="mt-5 flex items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
-              disabled={uploading}
+              disabled={processing}
               onClick={() => fileInputRef.current?.click()}
               className="rounded-lg bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-800 disabled:opacity-50 whitespace-nowrap shrink-0"
             >
-              {uploading ? 'Uploading Chunks...' : 'Select capture-audit.json'}
+              {processing ? 'Processing Locally...' : 'Select capture-audit.json'}
             </button>
+            {auditDataset && (
+              <button
+                type="button"
+                onClick={onNavigateToModels}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
+              >
+                View Model Leaderboard
+              </button>
+            )}
           </div>
 
-          {uploading && (
+          {processing && (
             <div className="mt-5 w-full max-w-md space-y-1.5">
               <div className="flex justify-between text-xs text-slate-600 tabular-nums">
-                <span>Streaming 512 KB chunks</span>
-                <span>
-                  {formatBytes(uploadedBytes)} / {formatBytes(totalBytes)} ({progressPct}%)
-                </span>
+                <span>{stageLabel || 'Parsing file...'}</span>
+                <span>{progressPct}%</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                 <div
@@ -245,8 +222,7 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
         </div>
       </section>
 
-      {/* Summary & Schema Inspector */}
-      {loadingStatus && !summary && (
+      {loadingStorage && !summary && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           {[0, 1, 2, 3].map((k) => (
             <div key={k} className="h-24 animate-pulse rounded-xl border border-slate-200 bg-white" />
@@ -254,13 +230,13 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
         </div>
       )}
 
-      {!loadingStatus && !summary && (
+      {!loadingStorage && !summary && (
         <section className="rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-base font-semibold text-slate-900">No training dataset on disk yet</h2>
+          <h2 className="text-base font-semibold text-slate-900">No capture audit dataset loaded yet</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Once you drop <span className="font-mono text-xs">capture-audit.json</span> above, this workbench will parse Schema-3 content hashes,
-            verify settled outcomes, map all 52 <span className="font-mono text-xs">home.*</span> / <span className="font-mono text-xs">away.*</span> variables,
-            and unlock chronological out-of-sample model training against <span className="font-semibold">CCVS</span>.
+            Drop your CourtQuant <span className="font-mono text-xs">capture-audit.json</span> above to parse Schema-3 content hashes,
+            extract settled SportyBet fixtures, map all 52 <span className="font-mono text-xs">home.*</span> / <span className="font-mono text-xs">away.*</span> variables,
+            and backtest your imported models locally.
           </p>
         </section>
       )}
@@ -399,7 +375,7 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
                   </div>
                 ) : (
                   <p className="text-slate-500">
-                    No direct home.*/away.* fields matched at shallow keys; inspect the sample schema paths below to map nested paths.
+                    No direct home.*/away.* fields matched; inspect the sample schema paths below.
                   </p>
                 )}
               </div>
@@ -414,7 +390,7 @@ export const AuditIngestionView: React.FC<AuditIngestionViewProps> = ({
                   Extracted Record Schema Paths
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Field paths and inferred JSON types across the first 50 records (no raw values exposed).
+                  Field paths and inferred JSON types across the first 50 records.
                 </p>
               </div>
               <input
